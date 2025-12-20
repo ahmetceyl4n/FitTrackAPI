@@ -1,0 +1,13 @@
+# --- Build (Derleme) Klasörleri (ASLA gitmemeli) ---
+[Bb]in/
+[Oo]bj/
+
+# --- Visual Studio Geçici Dosyalarý ---
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# --- Senin Eklediðin Gizli Dosya ---
+appsettings.Development.json
