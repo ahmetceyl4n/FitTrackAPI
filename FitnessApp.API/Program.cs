@@ -1,6 +1,7 @@
 using FitnessApp.Infrastructure;
 using FitnessApp.Application;
 using FluentValidation.AspNetCore;
+using FitnessApp.API.Middlewares;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthorization();
 

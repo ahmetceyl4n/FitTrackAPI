@@ -57,5 +57,27 @@ namespace FitnessApp.API.Controllers
             await _service.AddExerciseAsync(dto);
             return Ok(new { message = "Egzersiz ve setler antrenmana başarıyla eklendi!" });
         }
+
+        [HttpDelete("{workoutId}/exercises/{exerciseId}")]
+        public async Task<IActionResult> RemoveExercise(Guid workoutId, Guid exerciseId)
+        {
+            await _service.RemoveExerciseFromWorkoutAsync(workoutId, exerciseId);
+            return NoContent(); // 204 No Content (Başarılı ama geriye veri dönmüyorum demek)
+        }
+
+        [HttpPut("sets")]
+        public async Task<IActionResult> UpdateSet(UpdateSetDto dto)
+        {
+            await _service.UpdateSetAsync(dto);
+            return NoContent();
+        }
+
+        [HttpDelete("sets/{id}")]
+        public async Task<IActionResult> DeleteSet(Guid id)
+        {
+            await _service.DeleteSetAsync(id);
+            return NoContent();
+        }
+
     }
 }

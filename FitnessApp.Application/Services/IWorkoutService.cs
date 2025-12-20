@@ -12,5 +12,10 @@ namespace FitnessApp.Application.Services
 
         Task AddExerciseAsync(AddExerciseToWorkoutDto addExerciseToWorkoutDto);
 
+        Task RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId);
+
+        Task UpdateSetAsync(UpdateSetDto dto);
+        Task DeleteSetAsync(Guid setId);
+
     }
 }

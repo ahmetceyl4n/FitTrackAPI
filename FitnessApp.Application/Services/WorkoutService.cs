@@ -2,6 +2,7 @@
 using FitnessApp.Application.Common.Interfaces;
 using FitnessApp.Application.DTOs.WorkoutDTOs;
 using FitnessApp.Domain.Entities;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -16,20 +17,32 @@ namespace FitnessApp.Application.Services
         private readonly IGenericRepository<Workout> _workoutRepository;
         private readonly IGenericRepository<Exercise> _exerciseRepository;
         private readonly IGenericRepository<WorkoutExercise> _workoutExerciseRepository;
+        private readonly IGenericRepository<Set> _setRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        IValidator<CreateWorkoutDto> _createWorkoutValidator;
+        IValidator<AddExerciseToWorkoutDto> _addExerciseToWorkoutValidator;
 
-        public WorkoutService(IMapper mapper, IUnitOfWork unitOfWork, IGenericRepository<Workout> workoutRepository, IGenericRepository<Exercise> exerciseRepository, IGenericRepository<WorkoutExercise> workoutExerciseRepository)
+        public WorkoutService(IMapper mapper, IUnitOfWork unitOfWork, IGenericRepository<Workout> workoutRepository, IGenericRepository<Exercise> exerciseRepository, IGenericRepository<WorkoutExercise> workoutExerciseRepository, IGenericRepository<Set> setRepository, IValidator<CreateWorkoutDto> createWorkoutValidator, IValidator<AddExerciseToWorkoutDto> addExerciseToWorkoutValidator)
         {
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _workoutRepository = workoutRepository;
             _exerciseRepository = exerciseRepository;
             _workoutExerciseRepository = workoutExerciseRepository;
+            _setRepository = setRepository;
+            _createWorkoutValidator = createWorkoutValidator;
+            _addExerciseToWorkoutValidator = addExerciseToWorkoutValidator;
         }
 
         public async Task AddExerciseAsync(AddExerciseToWorkoutDto dto)
         {
+            var validationResult = await _addExerciseToWorkoutValidator.ValidateAsync(dto);
+            if (!validationResult.IsValid) 
+            {
+                throw new ValidationException(validationResult.Errors.First().ErrorMessage);
+            }
+
             var workout = await _workoutRepository.GetByIdAsync(dto.WorkoutId);
             if (workout == null) throw new Exception("Antrenman bulunamadı!");
 
@@ -45,6 +58,13 @@ namespace FitnessApp.Application.Services
 
         public async Task<Guid> CreateAsync(CreateWorkoutDto createDto)
         {
+            var validationResult = await _createWorkoutValidator.ValidateAsync(createDto);
+
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException(validationResult.Errors.First().ErrorMessage);
+            }
+
             createDto.Date = createDto.Date.ToUniversalTime();
 
             var workout = _mapper.Map<Workout>(createDto);
@@ -56,10 +76,29 @@ namespace FitnessApp.Application.Services
 
         public async Task DeleteAsync(Guid id)
         {
-            var workout = await _workoutRepository.GetByIdAsync(id);
+            var workout = await _workoutRepository.GetAll()
+                .Include(w => w.WorkoutExercises)
+                .FirstOrDefaultAsync(x => x.Id == id );
             if (workout != null)
             {
+                foreach (var exerciseLink in workout.WorkoutExercises)
+                {
+                    _workoutExerciseRepository.Remove(exerciseLink);
+                }
+
                 _workoutRepository.Remove(workout);
+
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
+        public async Task DeleteSetAsync(Guid setId)
+        {
+            var set = await _setRepository.GetByIdAsync(setId);
+
+            if (set != null) 
+            {
+                _setRepository.Remove(set);
                 await _unitOfWork.SaveChangesAsync();
             }
         }
@@ -84,6 +123,19 @@ namespace FitnessApp.Application.Services
             return _mapper.Map<WorkoutDto>(workout);
         }
 
+        public async Task RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId)
+        {
+            var record = await _workoutExerciseRepository.GetAll()
+                .FirstOrDefaultAsync(x => x.WorkoutId == workoutId && x.ExerciseId == exerciseId);
+
+            if (record == null)
+            {
+                throw new Exception("Böyle bir kayıt bulunamadı! Zaten silinmiş olabilir.");
+            }
+            _workoutExerciseRepository.Remove(record);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(UpdateWorkoutDto updateDto)
         {
             var workout = await _workoutRepository.GetByIdAsync(updateDto.Id);
@@ -95,6 +147,17 @@ namespace FitnessApp.Application.Services
                 _workoutRepository.Update(workout);
                 await _unitOfWork.SaveChangesAsync();
             }
+        }
+
+        public async Task UpdateSetAsync(UpdateSetDto dto)
+        {
+            var set = await _setRepository.GetByIdAsync(dto.Id);
+            if (set == null) throw new Exception("Set Bulunamadı.");
+
+            _mapper.Map(dto, set);
+
+            _setRepository.Update(set);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

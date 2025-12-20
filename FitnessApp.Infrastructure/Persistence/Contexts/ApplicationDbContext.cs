@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FitnessApp.Domain.Entities;
+using FitnessApp.Domain.Common;
 
 namespace FitnessApp.Infrastructure.Persistence.Contexts
 {
@@ -45,6 +46,31 @@ namespace FitnessApp.Infrastructure.Persistence.Contexts
             modelBuilder.Entity<WorkoutExercise>().HasQueryFilter(x => !x.IsDeleted);
 
 
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        // Yeni kayıt ekleniyorsa:
+                        entry.Entity.CreatedDate = DateTime.UtcNow;
+                        entry.Entity.CreatedBy = "System"; // Login sistemi gelince buraya UserId gelecek
+                        entry.Entity.IsDeleted = false;
+                        break;
+
+                    case EntityState.Modified:
+                        // Kayıt güncelleniyorsa:
+                        entry.Entity.UpdatedDate = DateTime.UtcNow;
+                        entry.Entity.LastModifiedBy = "System";
+                        break;
+                }
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
         }
 
     }

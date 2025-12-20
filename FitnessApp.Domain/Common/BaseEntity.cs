@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FitnessApp.Domain.Common
 {
-    public abstract class BaseEntity
+    public abstract class BaseEntity : ISoftDelete
     {
         public Guid Id { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;

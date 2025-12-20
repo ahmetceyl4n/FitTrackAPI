@@ -42,6 +42,8 @@ namespace FitnessApp.Application.Common.Mappings
             CreateMap<Domain.Entities.Workout, WorkoutDto>()
                 .ForMember(dest => dest.Exercises, opt => opt.MapFrom(src => src.WorkoutExercises)) 
                 .ReverseMap();
+
+            CreateMap<UpdateSetDto, Set>();
         }
     }
 }

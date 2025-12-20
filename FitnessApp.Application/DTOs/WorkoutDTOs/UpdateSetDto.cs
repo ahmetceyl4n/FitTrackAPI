@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FitnessApp.Application.DTOs.WorkoutDTOs
 {
-    public class SetDto
+    public class UpdateSetDto
     {
         public Guid Id { get; set; }
         public int Reps { get; set; }
