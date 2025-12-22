@@ -50,12 +50,11 @@ namespace FitnessApp.Infrastructure.Services
             
             await _userManager.UpdateAsync(user);
 
-            // 2. Biz de bunu Client'a döneceğimiz asıl DTO'ya çeviriyoruz
             var tokenResponse = new TokenResponseDto
             {
                 AccessToken = generatedToken.Token,
                 RefreshToken = generatedToken.RefreshToken,
-                Expiration = generatedToken.Expiration, // Direkt oradan gelen tarihi kullanıyoruz
+                Expiration = generatedToken.Expiration, 
                 UserId = user.Id.ToString(),
                 UserName = user.UserName
             };
@@ -127,6 +126,18 @@ namespace FitnessApp.Infrastructure.Services
                 var errors = result.Errors.Select(e => e.Description);
                 return ServiceResult<bool>.Failure(errors);
             }
+
+            return ServiceResult<bool>.Success(true);
+        }
+    public async Task<ServiceResult<bool>> RevokeTokenAsync(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null) return ServiceResult<bool>.Failure("Kullanıcı bulunamadı.");
+
+            user.RefreshToken = null; // Token'ı siliyoruz
+            user.RefreshTokenExpiryTime = null;
+
+            await _userManager.UpdateAsync(user);
 
             return ServiceResult<bool>.Success(true);
         }

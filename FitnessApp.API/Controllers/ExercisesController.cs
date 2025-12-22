@@ -22,40 +22,56 @@ namespace FitnessApp.API.Controllers
         public async Task<IActionResult> GetAll()
         {
             var result = await _exerciseService.GetAllAsync();
-            return Ok(result);
+            if (result.Succeeded)
+            {
+                return Ok(result.Data);
+            }
+            return BadRequest(result.ErrorMessage);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _exerciseService.GetByIdAsync(id);
-            if (result == null)
+            if (result.Succeeded)
             {
-                return NotFound(); 
+                return Ok(result.Data);
             }
-            return Ok(result);
+            return NotFound(new { Message = result.ErrorMessage });
         }
 
         [HttpPost]
         public async Task<IActionResult> Create(CreateExerciseDto createExerciseDto)
         {
-            var id = await _exerciseService.CreateAsync(createExerciseDto);
+            var result = await _exerciseService.CreateAsync(createExerciseDto);
 
-            return CreatedAtAction(nameof(GetById), new { id = id }, new { id = id });
+            if (result.Succeeded)
+            {
+                return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
+            }
+            return BadRequest(result.ErrorMessage);
         }
 
         [HttpPut]
         public async Task<IActionResult> Update(UpdateExerciseDto updateDto)
         {
-            await _exerciseService.UpdateAsync(updateDto);
-            return NoContent(); 
+            var result = await _exerciseService.UpdateAsync(updateDto);
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            return BadRequest(result.ErrorMessage);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _exerciseService.DeleteAsync(id);
-            return NoContent();
+            var result = await _exerciseService.DeleteAsync(id);
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            return BadRequest(result.ErrorMessage);
         }
 
 

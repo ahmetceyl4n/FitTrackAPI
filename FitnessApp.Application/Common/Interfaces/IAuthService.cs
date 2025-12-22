@@ -11,7 +11,8 @@ namespace FitnessApp.Application.Common.Interfaces
     public interface IAuthService
     {
         Task<ServiceResult<TokenResponseDto>> LoginAsync(LoginDto loginDto);
-        Task<ServiceResult<TokenResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequest);
+        Task<ServiceResult<TokenResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto tokenRequest);
+        Task<ServiceResult<bool>> RevokeTokenAsync(string username);
         Task<ServiceResult<bool>> RegisterAsync(RegisterDto registerDto); 
      }
 }

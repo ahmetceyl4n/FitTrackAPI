@@ -2,6 +2,7 @@
 using FitnessApp.Application.Common.Interfaces;
 using FitnessApp.Application.DTOs.WorkoutDTOs;
 using FitnessApp.Domain.Entities;
+using FitnessApp.Application.Common.Models; // Added
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -35,34 +36,36 @@ namespace FitnessApp.Application.Services
             _addExerciseToWorkoutValidator = addExerciseToWorkoutValidator;
         }
 
-        public async Task AddExerciseAsync(AddExerciseToWorkoutDto dto)
+        public async Task<ServiceResult<bool>> AddExerciseAsync(AddExerciseToWorkoutDto dto)
         {
             var validationResult = await _addExerciseToWorkoutValidator.ValidateAsync(dto);
             if (!validationResult.IsValid) 
             {
-                throw new ValidationException(validationResult.Errors.First().ErrorMessage);
+                // Validation hatasını düzgünce dönüyoruz
+                return ServiceResult<bool>.Failure(validationResult.Errors.Select(e => e.ErrorMessage));
             }
 
             var workout = await _workoutRepository.GetByIdAsync(dto.WorkoutId);
-            if (workout == null) throw new Exception("Antrenman bulunamadı!");
+            if (workout == null) return ServiceResult<bool>.Failure("Antrenman bulunamadı!");
 
             var exercise = await _exerciseRepository.GetByIdAsync(dto.ExerciseId);
-            if (exercise == null) throw new Exception("Egzersiz bulunamadı!");
+            if (exercise == null) return ServiceResult<bool>.Failure("Egzersiz bulunamadı!");
 
             var workoutExercise = _mapper.Map<WorkoutExercise>(dto);
 
             await _workoutExerciseRepository.AddAsync(workoutExercise);
             await _unitOfWork.SaveChangesAsync();
 
+            return ServiceResult<bool>.Success(true);
         }
 
-        public async Task<Guid> CreateAsync(CreateWorkoutDto createDto)
+        public async Task<ServiceResult<Guid>> CreateAsync(CreateWorkoutDto createDto)
         {
             var validationResult = await _createWorkoutValidator.ValidateAsync(createDto);
 
             if (!validationResult.IsValid)
             {
-                throw new ValidationException(validationResult.Errors.First().ErrorMessage);
+                return ServiceResult<Guid>.Failure(validationResult.Errors.Select(e => e.ErrorMessage));
             }
 
             createDto.Date = createDto.Date.ToUniversalTime();
@@ -71,45 +74,52 @@ namespace FitnessApp.Application.Services
 
             await _workoutRepository.AddAsync(workout);
             await _unitOfWork.SaveChangesAsync();
-            return workout.Id;
+            return ServiceResult<Guid>.Success(workout.Id);
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
         {
             var workout = await _workoutRepository.GetAll()
                 .Include(w => w.WorkoutExercises)
                 .FirstOrDefaultAsync(x => x.Id == id );
-            if (workout != null)
+            
+            if (workout == null)
             {
-                foreach (var exerciseLink in workout.WorkoutExercises)
-                {
-                    _workoutExerciseRepository.Remove(exerciseLink);
-                }
-
-                _workoutRepository.Remove(workout);
-
-                await _unitOfWork.SaveChangesAsync();
+                return ServiceResult<bool>.Failure("Antrenman bulunamadı.");
             }
+
+            foreach (var exerciseLink in workout.WorkoutExercises)
+            {
+                _workoutExerciseRepository.Remove(exerciseLink);
+            }
+
+            _workoutRepository.Remove(workout);
+
+            await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
         }
 
-        public async Task DeleteSetAsync(Guid setId)
+        public async Task<ServiceResult<bool>> DeleteSetAsync(Guid setId)
         {
             var set = await _setRepository.GetByIdAsync(setId);
 
-            if (set != null) 
+            if (set == null) 
             {
-                _setRepository.Remove(set);
-                await _unitOfWork.SaveChangesAsync();
+                return ServiceResult<bool>.Failure("Set bulunamadı.");
             }
+            
+            _setRepository.Remove(set);
+            await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
         }
 
-        public async Task<List<WorkoutDto>> GetAllAsync()
+        public async Task<ServiceResult<List<WorkoutDto>>> GetAllAsync()
         {
             var workouts = await _workoutRepository.GetAll().ToListAsync();
-            return _mapper.Map<List<WorkoutDto>>(workouts);
+            return ServiceResult<List<WorkoutDto>>.Success(_mapper.Map<List<WorkoutDto>>(workouts));
         }
 
-        public async Task<WorkoutDto> GetByIdAsync(Guid id)
+        public async Task<ServiceResult<WorkoutDto>> GetByIdAsync(Guid id)
         {
             var workout = await _workoutRepository.GetAll() // Sorguyu başlat
                 .Include(w => w.WorkoutExercises)           // 1. Ara tabloyu (WorkoutExercise) dahil et
@@ -118,46 +128,48 @@ namespace FitnessApp.Application.Services
                     .ThenInclude(we => we.Sets)             // 3. Oradan Setlere (Sets) zıpla
                 .FirstOrDefaultAsync(w => w.Id == id);      // 4. Ve ID'si eşleşen İLK kaydı getir.
 
-            if (workout == null) return null;
+            if (workout == null) return ServiceResult<WorkoutDto>.Failure("Antrenman bulunamadı.");
 
-            return _mapper.Map<WorkoutDto>(workout);
+            return ServiceResult<WorkoutDto>.Success(_mapper.Map<WorkoutDto>(workout));
         }
 
-        public async Task RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId)
+        public async Task<ServiceResult<bool>> RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId)
         {
             var record = await _workoutExerciseRepository.GetAll()
                 .FirstOrDefaultAsync(x => x.WorkoutId == workoutId && x.ExerciseId == exerciseId);
 
             if (record == null)
             {
-                throw new Exception("Böyle bir kayıt bulunamadı! Zaten silinmiş olabilir.");
+                return ServiceResult<bool>.Failure("Böyle bir kayıt bulunamadı! Zaten silinmiş olabilir.");
             }
             _workoutExerciseRepository.Remove(record);
             await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
         }
 
-        public async Task UpdateAsync(UpdateWorkoutDto updateDto)
+        public async Task<ServiceResult<bool>> UpdateAsync(UpdateWorkoutDto updateDto)
         {
             var workout = await _workoutRepository.GetByIdAsync(updateDto.Id);
-            if (workout != null) 
-            {
-                updateDto.Date = updateDto.Date.ToUniversalTime();
+            if (workout == null) return ServiceResult<bool>.Failure("Antrenman bulunamadı.");
 
-                _mapper.Map(updateDto, workout);
-                _workoutRepository.Update(workout);
-                await _unitOfWork.SaveChangesAsync();
-            }
+            updateDto.Date = updateDto.Date.ToUniversalTime();
+
+            _mapper.Map(updateDto, workout);
+            _workoutRepository.Update(workout);
+            await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
         }
 
-        public async Task UpdateSetAsync(UpdateSetDto dto)
+        public async Task<ServiceResult<bool>> UpdateSetAsync(UpdateSetDto dto)
         {
             var set = await _setRepository.GetByIdAsync(dto.Id);
-            if (set == null) throw new Exception("Set Bulunamadı.");
+            if (set == null) return ServiceResult<bool>.Failure("Set Bulunamadı.");
 
             _mapper.Map(dto, set);
 
             _setRepository.Update(set);
             await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
         }
     }
 }

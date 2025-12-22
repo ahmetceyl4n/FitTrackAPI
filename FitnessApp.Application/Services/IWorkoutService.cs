@@ -1,21 +1,22 @@
-﻿using FitnessApp.Application.DTOs.WorkoutDTOs;
+﻿using FitnessApp.Application.Common.Models; // Added
+using FitnessApp.Application.DTOs.WorkoutDTOs;
 
 namespace FitnessApp.Application.Services
 {
     public interface IWorkoutService
     {
-        Task<List<WorkoutDto>> GetAllAsync();
-        Task<WorkoutDto> GetByIdAsync(Guid id);
-        Task<Guid> CreateAsync(CreateWorkoutDto createDto);
-        Task UpdateAsync(UpdateWorkoutDto updateDto);
-        Task DeleteAsync(Guid id);
+        Task<ServiceResult<List<WorkoutDto>>> GetAllAsync();
+        Task<ServiceResult<WorkoutDto>> GetByIdAsync(Guid id);
+        Task<ServiceResult<Guid>> CreateAsync(CreateWorkoutDto createDto);
+        Task<ServiceResult<bool>> UpdateAsync(UpdateWorkoutDto updateDto); // Changed to ServiceResult<bool>
+        Task<ServiceResult<bool>> DeleteAsync(Guid id); // Changed to ServiceResult<bool>
 
-        Task AddExerciseAsync(AddExerciseToWorkoutDto addExerciseToWorkoutDto);
+        Task<ServiceResult<bool>> AddExerciseAsync(AddExerciseToWorkoutDto addExerciseToWorkoutDto); // Changed to ServiceResult<bool>
 
-        Task RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId);
+        Task<ServiceResult<bool>> RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId); // Changed to ServiceResult<bool>
 
-        Task UpdateSetAsync(UpdateSetDto dto);
-        Task DeleteSetAsync(Guid setId);
+        Task<ServiceResult<bool>> UpdateSetAsync(UpdateSetDto dto); // Changed to ServiceResult<bool>
+        Task<ServiceResult<bool>> DeleteSetAsync(Guid setId); // Changed to ServiceResult<bool>
 
     }
 }

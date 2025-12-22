@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using FitnessApp.Application.DTOs.ExerciseDTOs;
 
+using FitnessApp.Application.Common.Models; // Added
+
 namespace FitnessApp.Application.Services
 {
     public class ExerciseService : IExerciseService
@@ -24,51 +26,68 @@ namespace FitnessApp.Application.Services
             _repository = repository;
         }
 
-        public async Task<Guid> CreateAsync(CreateExerciseDto createDto)
+        public async Task<ServiceResult<Guid>> CreateAsync(CreateExerciseDto createDto)
         {
-            var exercise = _mapper.Map<Exercise>(createDto);
-            await _repository.AddAsync(exercise);
-            await _unitOfWork.SaveChangesAsync();
-            return exercise.Id;
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            var exercise = await _repository.GetByIdAsync(id);
-            if (exercise != null) 
+            try
             {
-                _repository.Remove(exercise);
+                var exercise = _mapper.Map<Exercise>(createDto);
+                await _repository.AddAsync(exercise);
                 await _unitOfWork.SaveChangesAsync();
+                return ServiceResult<Guid>.Success(exercise.Id);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<Guid>.Failure($"Egzersiz oluşturulurken bir hata oluştu: {ex.Message}");
             }
         }
 
-        public async Task<List<ExerciseDto>> GetAllAsync()
+        public async Task<ServiceResult<bool>> DeleteAsync(Guid id)
+        {
+            var exercise = await _repository.GetByIdAsync(id);
+            if (exercise == null)
+            {
+                return ServiceResult<bool>.Failure("Egzersiz bulunamadı.");
+            }
+
+            _repository.Remove(exercise);
+            await _unitOfWork.SaveChangesAsync();
+            return ServiceResult<bool>.Success(true);
+        }
+
+        public async Task<ServiceResult<List<ExerciseDto>>> GetAllAsync()
         {
             var exercisesQuery = _repository.GetAll();
             var exercises = await exercisesQuery.ToListAsync();
-            return _mapper.Map<List<ExerciseDto>>(exercises);
+            var dtos = _mapper.Map<List<ExerciseDto>>(exercises);
+            return ServiceResult<List<ExerciseDto>>.Success(dtos);
         }
 
-        public async Task<ExerciseDto> GetByIdAsync(Guid id)
+        public async Task<ServiceResult<ExerciseDto>> GetByIdAsync(Guid id)
         {
             var exercise = await _repository.GetByIdAsync(id);
+            if (exercise == null)
+            {
+                return ServiceResult<ExerciseDto>.Failure("Egzersiz bulunamadı.");
+            }
             
-            return _mapper.Map<ExerciseDto>(exercise);
-           
+            var dto = _mapper.Map<ExerciseDto>(exercise);
+            return ServiceResult<ExerciseDto>.Success(dto);
         }
 
-        public async Task UpdateAsync(UpdateExerciseDto updateDto)
+        public async Task<ServiceResult<bool>> UpdateAsync(UpdateExerciseDto updateDto)
         {
             var exercise = await _repository.GetByIdAsync(updateDto.Id);
 
-            if (exercise != null) 
+            if (exercise == null)
             {
-                _mapper.Map(updateDto, exercise);
-
-                _repository.Update(exercise);
-
-                await _unitOfWork.SaveChangesAsync();
+                return ServiceResult<bool>.Failure("Egzersiz bulunamadı.");
             }
+
+            _mapper.Map(updateDto, exercise);
+            _repository.Update(exercise);
+            await _unitOfWork.SaveChangesAsync();
+            
+            return ServiceResult<bool>.Success(true);
         }
     }
 }

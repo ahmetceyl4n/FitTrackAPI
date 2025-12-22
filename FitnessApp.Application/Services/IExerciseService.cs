@@ -5,14 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using FitnessApp.Application.Common.Models; // Added
+
 namespace FitnessApp.Application.Services
 {
     public interface IExerciseService
     {
-        Task<List<ExerciseDto>> GetAllAsync();
-        Task<ExerciseDto> GetByIdAsync(Guid id);
-        Task<Guid> CreateAsync(CreateExerciseDto createDto);
-        Task UpdateAsync(UpdateExerciseDto updateDto);
-        Task DeleteAsync(Guid id);
+        Task<ServiceResult<List<ExerciseDto>>> GetAllAsync();
+        Task<ServiceResult<ExerciseDto>> GetByIdAsync(Guid id);
+        Task<ServiceResult<Guid>> CreateAsync(CreateExerciseDto createDto);
+        Task<ServiceResult<bool>> UpdateAsync(UpdateExerciseDto updateDto); // Changed from Task to Task<ServiceResult<bool>>
+        Task<ServiceResult<bool>> DeleteAsync(Guid id); // Changed from Task to Task<ServiceResult<bool>>
     }
 }
