@@ -2,11 +2,13 @@
 using FitnessApp.Application.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FitnessApp.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ExercisesController : ControllerBase
     {
         private readonly IExerciseService _exerciseService;

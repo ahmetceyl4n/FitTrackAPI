@@ -6,10 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 using FitnessApp.Domain.Entities;
 using FitnessApp.Domain.Common;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using FitnessApp.Domain.Identity;
 
 namespace FitnessApp.Infrastructure.Persistence.Contexts
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<AppUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -56,14 +58,14 @@ namespace FitnessApp.Infrastructure.Persistence.Contexts
                 switch (entry.State)
                 {
                     case EntityState.Added:
-                        // Yeni kayıt ekleniyorsa:
+                      
                         entry.Entity.CreatedDate = DateTime.UtcNow;
-                        entry.Entity.CreatedBy = "System"; // Login sistemi gelince buraya UserId gelecek
+                        entry.Entity.CreatedBy = "System"; 
                         entry.Entity.IsDeleted = false;
                         break;
 
                     case EntityState.Modified:
-                        // Kayıt güncelleniyorsa:
+                        
                         entry.Entity.UpdatedDate = DateTime.UtcNow;
                         entry.Entity.LastModifiedBy = "System";
                         break;
