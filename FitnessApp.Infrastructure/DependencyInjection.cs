@@ -24,6 +24,9 @@ namespace FitnessApp.Infrastructure
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
 
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUserService, CurrentUserService>();
+
             services.AddIdentity<AppUser, IdentityRole>(options =>
             {
                 // Şifre kurallarını test için basitleştirebiliriz (İstersen)

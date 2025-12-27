@@ -16,8 +16,7 @@ namespace FitnessApp.Application.Validators
                 .NotEmpty().WithMessage("Antrenman adı boş olamaz.")
                 .MaximumLength(50).WithMessage("Antrenman adı 50 karakterden uzun olamaz.");
 
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("Kullanıcı ID zorunludur.");
+
         }
     }
 }

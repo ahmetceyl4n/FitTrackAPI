@@ -38,15 +38,12 @@ namespace FitnessApp.Infrastructure.Services
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
             if (!result.Succeeded) return ServiceResult<TokenResponseDto>.Failure("Kullanıcı veya şifre hatalı.");
 
-            // 1. TokenService bize hem token'ı hem tarihi içeren DTO veriyor
             var generatedToken = _tokenService.CreateToken(user);
-
-            // [NEW] Refresh Token'ı DB'ye kaydet
+     
             user.RefreshToken = generatedToken.RefreshToken;
-            
-            // Access Token süresini config'den al, yoksa varsayılan 60 dk
+
             double accessTokenDuration = double.TryParse(_configuration["JwtSettings:DurationInMinutes"], out double val) ? val : 60;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(accessTokenDuration + 30); // Access Token + 30 dk
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(accessTokenDuration + 30); 
             
             await _userManager.UpdateAsync(user);
 
@@ -81,13 +78,12 @@ namespace FitnessApp.Infrastructure.Services
                     return ServiceResult<TokenResponseDto>.Failure("Invalid access token or refresh token");
                 }
 
-                // Yeni token üret ve kaydet
                 var newGeneratedToken = _tokenService.CreateToken(user);
                 user.RefreshToken = newGeneratedToken.RefreshToken;
 
-                // Access Token süresini config'den al, yoksa varsayılan 60 dk
+
                 double accessTokenDuration = double.TryParse(_configuration["JwtSettings:DurationInMinutes"], out double duration) ? duration : 60;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(accessTokenDuration + 30); // Access Token + 30 dk
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(accessTokenDuration + 30);
                 
                 await _userManager.UpdateAsync(user);
 
@@ -108,7 +104,7 @@ namespace FitnessApp.Infrastructure.Services
 
         public async Task<ServiceResult<bool>> RegisterAsync(RegisterDto registerDto)
         {
-            // Burası aynı kalıyor
+
             var userExists = await _userManager.FindByEmailAsync(registerDto.Email);
             if (userExists != null) return ServiceResult<bool>.Failure("Bu email zaten kullanımda.");
 
@@ -134,7 +130,7 @@ namespace FitnessApp.Infrastructure.Services
             var user = await _userManager.FindByNameAsync(username);
             if (user == null) return ServiceResult<bool>.Failure("Kullanıcı bulunamadı.");
 
-            user.RefreshToken = null; // Token'ı siliyoruz
+            user.RefreshToken = null; 
             user.RefreshTokenExpiryTime = null;
 
             await _userManager.UpdateAsync(user);

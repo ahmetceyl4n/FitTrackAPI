@@ -8,15 +8,19 @@ namespace FitnessApp.Application.Services
         Task<ServiceResult<List<WorkoutDto>>> GetAllAsync();
         Task<ServiceResult<WorkoutDto>> GetByIdAsync(Guid id);
         Task<ServiceResult<Guid>> CreateAsync(CreateWorkoutDto createDto);
-        Task<ServiceResult<bool>> UpdateAsync(UpdateWorkoutDto updateDto); // Changed to ServiceResult<bool>
-        Task<ServiceResult<bool>> DeleteAsync(Guid id); // Changed to ServiceResult<bool>
+        Task<ServiceResult<bool>> UpdateAsync(UpdateWorkoutDto updateDto); 
+        Task<ServiceResult<bool>> DeleteAsync(Guid id); 
 
-        Task<ServiceResult<bool>> AddExerciseAsync(AddExerciseToWorkoutDto addExerciseToWorkoutDto); // Changed to ServiceResult<bool>
+        // Egzersiz ekleme/çıkarma işlemleri de o antrenmanın sahibi tarafından mı yapılıyor kontrol edilmeli
+        Task<ServiceResult<bool>> AddExerciseAsync(AddExerciseToWorkoutDto addExerciseToWorkoutDto); 
 
-        Task<ServiceResult<bool>> RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId); // Changed to ServiceResult<bool>
+        Task<ServiceResult<bool>> RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId); 
 
-        Task<ServiceResult<bool>> UpdateSetAsync(UpdateSetDto dto); // Changed to ServiceResult<bool>
-        Task<ServiceResult<bool>> DeleteSetAsync(Guid setId); // Changed to ServiceResult<bool>
+        // Set işlemleri için de dolaylı yoldan kontrol gerekebilir ama şimdilik doğrudan Set ID ile gidiyoruz.
+        // İdeal dünyada Set -> WorkoutExercise -> Workout -> UserId zinciri kontrol edilmeli.
+        // Başlangıç için yukarıdakiler yeterli.
+        Task<ServiceResult<bool>> UpdateSetAsync(UpdateSetDto dto); 
+        Task<ServiceResult<bool>> DeleteSetAsync(Guid setId); 
 
     }
 }

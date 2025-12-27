@@ -30,12 +30,12 @@ namespace FitnessApp.Infrastructure.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.Name, user.UserName ?? "")
+                new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()) // Explicitly add this for User.FindFirst(ClaimTypes.NameIdentifier)
             };
 
             var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature);
 
-            // 1. Tarihi burada hesaplıyoruz (Tek yetkili)
             var durationInMinutes = double.TryParse(_config["JwtSettings:DurationInMinutes"], out double min) ? min : 60;
             var expiry = DateTime.UtcNow.AddMinutes(durationInMinutes);
 
@@ -51,16 +51,14 @@ namespace FitnessApp.Infrastructure.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
 
-            // 2. Yeni oluşturduğumuz DTO ile dönüyoruz
+          
             return new GeneratedTokenDto
             {
                 Token = tokenHandler.WriteToken(token),
-                RefreshToken = GenerateRefreshToken(), // Refresh Token üretiyoruz
+                RefreshToken = GenerateRefreshToken(),
                 Expiration = expiry
             };
         }
-
-        // Kriptografik olarak güvenli rastgele sayı üreteci (RNG) kullanarak token oluşturur
         private string GenerateRefreshToken()
         {
             var randomNumber = new byte[64];
@@ -69,7 +67,6 @@ namespace FitnessApp.Infrastructure.Services
             return Convert.ToBase64String(randomNumber);
         }
 
-        // Süresi dolmuş Access Token'dan kimlik (ClaimsPrincipal) bilgisini çıkartır
         public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
         {
             var tokenValidationParameters = new TokenValidationParameters
@@ -78,13 +75,13 @@ namespace FitnessApp.Infrastructure.Services
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = _key,
-                ValidateLifetime = false // ÖNEMLİ: Süresi dolmuş olsa bile validate et diyoruz (içini okumak için)
+                ValidateLifetime = false 
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
             
-            // Algoritma kontrolü (Güvenlik için önemli)
+        
             if (securityToken is not JwtSecurityToken jwtSecurityToken || 
                 !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase))
             {

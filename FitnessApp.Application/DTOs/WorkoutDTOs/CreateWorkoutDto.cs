@@ -9,7 +9,7 @@ namespace FitnessApp.Application.DTOs.WorkoutDTOs
     public class CreateWorkoutDto
     {
         public string Name { get; set; } 
-        public string UserId { get; set; } 
+
         public DateTime Date { get; set; }
     }
 }
