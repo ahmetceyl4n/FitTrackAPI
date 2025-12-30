@@ -1,6 +1,6 @@
-# FitnessApp - Workout Tracking API
+# FitTrack - Workout Tracking API
 
-**FitnessApp** is a modern Backend API project developed with .NET 8 and Clean Architecture principles, allowing users to track their workouts, exercises, and set counts.
+**FitTrack** is a modern Backend API project developed with .NET 8 and Clean Architecture principles, allowing users to track their workouts, exercises, and set counts.
 
 ## 🚀 Features
 
