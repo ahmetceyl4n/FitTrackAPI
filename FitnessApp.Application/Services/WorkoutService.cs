@@ -21,11 +21,13 @@ namespace FitnessApp.Application.Services
         private readonly IGenericRepository<Set> _setRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly ICurrentUserService _currentUserService; // Inject ediyoruz
+        private readonly ICurrentUserService _currentUserService;
         IValidator<CreateWorkoutDto> _createWorkoutValidator;
         IValidator<AddExerciseToWorkoutDto> _addExerciseToWorkoutValidator;
+        IValidator<UpdateWorkoutDto> _updateWorkoutValidator; // Yeni
+        IValidator<UpdateSetDto> _updateSetValidator; // Yeni
 
-        public WorkoutService(IMapper mapper, IUnitOfWork unitOfWork, IGenericRepository<Workout> workoutRepository, IGenericRepository<Exercise> exerciseRepository, IGenericRepository<WorkoutExercise> workoutExerciseRepository, IGenericRepository<Set> setRepository, IValidator<CreateWorkoutDto> createWorkoutValidator, IValidator<AddExerciseToWorkoutDto> addExerciseToWorkoutValidator, ICurrentUserService currentUserService)
+        public WorkoutService(IMapper mapper, IUnitOfWork unitOfWork, IGenericRepository<Workout> workoutRepository, IGenericRepository<Exercise> exerciseRepository, IGenericRepository<WorkoutExercise> workoutExerciseRepository, IGenericRepository<Set> setRepository, IValidator<CreateWorkoutDto> createWorkoutValidator, IValidator<AddExerciseToWorkoutDto> addExerciseToWorkoutValidator, ICurrentUserService currentUserService, IValidator<UpdateWorkoutDto> updateWorkoutValidator, IValidator<UpdateSetDto> updateSetValidator)
         {
             _mapper = mapper;
             _unitOfWork = unitOfWork;
@@ -36,9 +38,10 @@ namespace FitnessApp.Application.Services
             _createWorkoutValidator = createWorkoutValidator;
             _addExerciseToWorkoutValidator = addExerciseToWorkoutValidator;
             _currentUserService = currentUserService;
+            _updateWorkoutValidator = updateWorkoutValidator;
+            _updateSetValidator = updateSetValidator;
         }
 
-        // Helper property to get UserId easily
         private string UserId => _currentUserService.UserId;
 
         public async Task<ServiceResult<bool>> AddExerciseAsync(AddExerciseToWorkoutDto dto)
@@ -49,7 +52,6 @@ namespace FitnessApp.Application.Services
                 return ServiceResult<bool>.Failure(validationResult.Errors.Select(e => e.ErrorMessage));
             }
 
-            // Antrenmanı çekerken UserId'sini de kontrol ediyoruz
             var workout = await _workoutRepository.GetAll().FirstOrDefaultAsync(x => x.Id == dto.WorkoutId && x.UserId == UserId);
             
             if (workout == null) return ServiceResult<bool>.Failure("Antrenman bulunamadı veya erişim yetkiniz yok!");
@@ -85,7 +87,6 @@ namespace FitnessApp.Application.Services
 
                 var workout = _mapper.Map<Workout>(createDto);
                 
-                // Kullanıcı ID'sini atıyoruz
                 workout.UserId = UserId; 
 
                 await _workoutRepository.AddAsync(workout);
@@ -94,7 +95,6 @@ namespace FitnessApp.Application.Services
             }
             catch (Exception ex)
             {
-                // DEBUG: Hata detayını dönüyoruz
                 return ServiceResult<Guid>.Failure($"Sunucu hatası: {ex.Message} | Inner: {ex.InnerException?.Message}");
             }
         }
@@ -103,7 +103,7 @@ namespace FitnessApp.Application.Services
         {
             var workout = await _workoutRepository.GetAll()
                 .Include(w => w.WorkoutExercises)
-                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == UserId); // UserId Kontrolü
+                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == UserId); 
             
             if (workout == null)
             {
@@ -123,13 +123,19 @@ namespace FitnessApp.Application.Services
 
         public async Task<ServiceResult<bool>> DeleteSetAsync(Guid setId)
         {
-             // TODO: Burada da set'in bağlı olduğu workout'un sahibini kontrol etmek gerekebilir.
-             // Şimdilik basit bırakıyoruz.
-            var set = await _setRepository.GetByIdAsync(setId);
+            var set = await _setRepository.GetAll()
+                .Include(s => s.WorkoutExercise)
+                .ThenInclude(we => we.Workout)
+                .FirstOrDefaultAsync(s => s.Id == setId);
 
             if (set == null) 
             {
                 return ServiceResult<bool>.Failure("Set bulunamadı.");
+            }
+
+            if (set.WorkoutExercise?.Workout?.UserId != UserId)
+            {
+                return ServiceResult<bool>.Failure("Bu işlemi yapmaya yetkiniz yok.");
             }
             
             _setRepository.Remove(set);
@@ -139,7 +145,6 @@ namespace FitnessApp.Application.Services
 
         public async Task<ServiceResult<List<WorkoutDto>>> GetAllAsync()
         {
-            // Sadece bu kullacının antrenmanlarını getir
             var workouts = await _workoutRepository.GetAll()
                                                    .Where(x => x.UserId == UserId)
                                                    .ToListAsync();
@@ -162,7 +167,7 @@ namespace FitnessApp.Application.Services
 
         public async Task<ServiceResult<bool>> RemoveExerciseFromWorkoutAsync(Guid workoutId, Guid exerciseId)
         {
-            // Önce antrenmanın sahibini kontrol etmemiz lazım
+
             var workout = await _workoutRepository.GetAll().FirstOrDefaultAsync(x => x.Id == workoutId && x.UserId == UserId);
             if (workout == null) return ServiceResult<bool>.Failure("Antrenman bulunamadı veya erişim yetkiniz yok!");
 
@@ -181,7 +186,12 @@ namespace FitnessApp.Application.Services
 
         public async Task<ServiceResult<bool>> UpdateAsync(UpdateWorkoutDto updateDto)
         {
-            // UserId kontrolü
+            var validationResult = await _updateWorkoutValidator.ValidateAsync(updateDto);
+            if (!validationResult.IsValid)
+            {
+                return ServiceResult<bool>.Failure(validationResult.Errors.Select(e => e.ErrorMessage));
+            }
+
             var workout = await _workoutRepository.GetAll().FirstOrDefaultAsync(x => x.Id == updateDto.Id && x.UserId == UserId);
             
             if (workout == null) return ServiceResult<bool>.Failure("Antrenman bulunamadı veya erişim yetkiniz yok.");
@@ -196,15 +206,30 @@ namespace FitnessApp.Application.Services
 
         public async Task<ServiceResult<bool>> UpdateSetAsync(UpdateSetDto dto)
         {
-             // TODO: UserId kontrolü buraya da eklenebilir.
-            var set = await _setRepository.GetByIdAsync(dto.Id);
+            var validationResult = await _updateSetValidator.ValidateAsync(dto);
+            if (!validationResult.IsValid)
+            {
+                return ServiceResult<bool>.Failure(validationResult.Errors.Select(e => e.ErrorMessage));
+            }
+
+            var set = await _setRepository.GetAll()
+                .Include(s => s.WorkoutExercise)
+                .ThenInclude(we => we.Workout)
+                .FirstOrDefaultAsync(s => s.Id == dto.Id);
+
             if (set == null) return ServiceResult<bool>.Failure("Set Bulunamadı.");
+ 
+            if (set.WorkoutExercise?.Workout?.UserId != UserId)
+            {
+                return ServiceResult<bool>.Failure("Bu seti güncellemeye yetkiniz yok.");
+            }
 
             _mapper.Map(dto, set);
 
             _setRepository.Update(set);
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult<bool>.Success(true);
+        
         }
     }
 }
